@@ -51,49 +51,62 @@ ver = 1
 
 def getInfo(printer):
 
-    model = netsnmp.snmpwalk(var_model, Version=ver, DestHost=printer, Community=community)[0]
-    statuses = netsnmp.snmpwalk(var_display, Version=ver, DestHost=printer, Community=community)
-    if statuses[1]:
-        status = statuses[0] + " " + statuses[1]
-    else:
-        status = statuses[0]
-    tonermax = int(netsnmp.snmpwalk(var_acc_max, Version=ver, DestHost=printer, Community=community)[0])
-    tonercurrent = int(netsnmp.snmpwalk(var_acc_current, Version=ver, DestHost=printer, Community=community)[0])
-    toner = 100.0 * tonercurrent / tonermax
-    kitmax = int(netsnmp.snmpwalk(var_acc_max, Version=ver, DestHost=printer, Community=community)[1])
-    kitcurrent = int(netsnmp.snmpwalk(var_acc_current, Version=ver, DestHost=printer, Community=community)[1])
-    kit = 100.0 * kitcurrent / kitmax
-    traynames = netsnmp.snmpwalk(var_tray_name, Version=ver, DestHost=printer, Community=community)
-    traystatuses = netsnmp.snmpwalk(var_tray_status, Version=ver, DestHost=printer, Community=community)
-    
-    return model, status, toner, kit, traynames, traystatuses
+    try:
+        model = netsnmp.snmpwalk(var_model, Version=ver, DestHost=printer, Community=community)[0]
+        statuses = netsnmp.snmpwalk(var_display, Version=ver, DestHost=printer, Community=community)
+        if statuses[1]:
+            status = statuses[0] + " " + statuses[1]
+        else:
+            status = statuses[0]
+
+        tonermax = int(netsnmp.snmpwalk(var_acc_max, Version=ver, DestHost=printer, Community=community)[0])
+        tonercurrent = int(netsnmp.snmpwalk(var_acc_current, Version=ver, DestHost=printer, Community=community)[0])
+        toner = 100.0 * tonercurrent / tonermax
+
+	if model != 'HP LaserJet P3010 Series':
+        	kitmax = int(netsnmp.snmpwalk(var_acc_max, Version=ver, DestHost=printer, Community=community)[1])
+        	kitcurrent = int(netsnmp.snmpwalk(var_acc_current, Version=ver, DestHost=printer, Community=community)[1])
+        	kit = 100.0 * kitcurrent / kitmax
+	else:
+		kit = 0
+
+        traynames = netsnmp.snmpwalk(var_tray_name, Version=ver, DestHost=printer, Community=community)
+        traystatuses = netsnmp.snmpwalk(var_tray_status, Version=ver, DestHost=printer, Community=community)
+        
+        return model, status, toner, kit, traynames, traystatuses
+    except IndexError:
+        return None, None, None, None, None, None
 
 def printStatus(show, printer, model, status, toner, kit, trayname, traystatus):
-
+    
     if show == 'all':
         os.system('clear')
         for i in range(0, len(printer)):
-            print bcolors.header + "Printer:  " + printer[i] + bcolors.endC + " - " + model[i]
-            print "Status:   " + status[i]
-            if toner[i] <= 1:
-                print "Toner:    " + bcolors.red + "%d%%" % toner[i] + bcolors.endC
-            elif 1 < toner[i] <= 10:
-                print "Toner:    " + bcolors.yellow + "%d%%" % toner[i] + bcolors.endC
+            if model[i] == None:
+                print bcolors.header + "Printer:  " + printer[i] + bcolors.red + "\n No connection\n" + bcolors.endC
             else:
-                print "Toner:    " + bcolors.green + "%d%%" % toner[i] + bcolors.endC
-            if kit[i] < 1:
-                print "Fuser:    " + bcolors.red + "%d%%" % kit[i] + bcolors.endC
-            elif 1 <= kit[i] <= 5:
-                print "Fuser:    " + bcolors.yellow + "%d%%" % kit[i] + bcolors.endC
-            else:
-                print "Fuser:   " + bcolors.green + " %d%%" % kit[i] + bcolors.endC
-            for j in range(1, len(trayname[i])):
-                if traystatus[i][j] in '0':
-                    print bcolors.blue + trayname[i][j] + bcolors.endC + ":   " + bcolors.green + "OK" + bcolors.endC
+                print bcolors.header + "Printer:  " + printer[i] + bcolors.endC + " - " + model[i]
+                print "Status:   " + status[i]
+                if toner[i] <= 1:
+                    print "Toner:    " + bcolors.red + "%d%%" % toner[i] + bcolors.endC
+                elif 1 < toner[i] <= 10:
+                    print "Toner:    " + bcolors.yellow + "%d%%" % toner[i] + bcolors.endC
                 else:
-                    print bcolors.blue + trayname[i][j] + bcolors.endC + ":   " + bcolors.red + "Empty" + bcolors.endC
-                #print bcolors.blue + trayname[i][j] + bcolors.endC + ":     " + traystatus[i][j]
-            print ""
+                    print "Toner:    " + bcolors.green + "%d%%" % toner[i] + bcolors.endC
+		if model[i] != 'HP LaserJet P3010 Series':
+                	if kit[i] < 1:
+                    		print "Fuser:    " + bcolors.red + "%d%%" % kit[i] + bcolors.endC
+                	elif 1 <= kit[i] <= 5:
+                    		print "Fuser:    " + bcolors.yellow + "%d%%" % kit[i] + bcolors.endC
+                	else:
+                    		print "Fuser:   " + bcolors.green + " %d%%" % kit[i] + bcolors.endC
+                for j in range(1, len(trayname[i])):
+                    if traystatus[i][j] in '0':
+                        print bcolors.blue + trayname[i][j] + bcolors.endC + ":   " + bcolors.green + "OK" + bcolors.endC
+                    else:
+                        print bcolors.blue + trayname[i][j] + bcolors.endC + ":   " + bcolors.red + "Empty" + bcolors.endC
+                    #print bcolors.blue + trayname[i][j] + bcolors.endC + ":     " + traystatus[i][j]
+                print ""
 
 
 def runStuff(printers, delay, show):
@@ -121,14 +134,14 @@ def runStuff(printers, delay, show):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 0:
         options, args = getopt.getopt(sys.argv[1:], 'hc:aed:', ['help', 'config=', 'all', 'error', 'delay='])
     else:
         print usage; sys.exit(1)
 
     delay = 30
     show = 'all'
-    printers = args
+    printers = ["hugsott1", "hugsott2", "versting1", "versting2", "bugge1", "bugge2"]
 
     for option, value in options:
         if option in ('-h', '--help'):
